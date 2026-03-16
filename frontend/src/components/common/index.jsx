@@ -1,34 +1,49 @@
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../store/authStore';
 
 export const Header = () => {
-  const { userId, logout } = useAuth();
-  const location = useLocation();
-
-  const navItems = [
-    { to: '/courses', label: '강의 목록' },
-    { to: '/my/enrollments', label: '내 수강내역' },
-    { to: '/my/history', label: '신청 이력' },
-  ];
+  const { isLoggedIn, isAdmin, userEmail, userName, logout } = useAuth();
 
   return (
     <header className="header">
       <div className="header-inner">
-        <Link to="/courses" className="logo">PLASK</Link>
-        <nav className="nav">
-          {navItems.map(({ to, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`nav-link ${location.pathname.startsWith(to) ? 'active' : ''}`}
+        <NavLink to="/" className="logo">PLASK</NavLink>
+
+        {isLoggedIn && (
+          <nav className="nav">
+            <NavLink
+              to="/products"
+              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
             >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <div className="header-user">
-          <span className="user-id">{userId}</span>
-          <button onClick={logout} className="btn-logout">로그아웃</button>
+              상품
+            </NavLink>
+            <NavLink
+              to="/my/orders"
+              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+            >
+              내 주문
+            </NavLink>
+          </nav>
+        )}
+
+        <div className="header-right">
+          {isLoggedIn ? (
+            <>
+              <span className="header-user">{userName || userEmail}</span>
+              {isAdmin && (
+                <NavLink to="/admin" className="btn btn-sm btn-header btn-header-admin">
+                  관리자
+                </NavLink>
+              )}
+              <button className="btn-header btn btn-sm" onClick={logout}>
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <NavLink to="/login" className="btn btn-sm btn-header">
+              로그인
+            </NavLink>
+          )}
         </div>
       </div>
     </header>
@@ -37,35 +52,17 @@ export const Header = () => {
 
 export const StatusBadge = ({ status }) => {
   const map = {
-    PENDING: { label: '대기 중', cls: 'badge-pending' },
-    SUCCESS: { label: '신청 완료', cls: 'badge-success' },
-    FAILED:  { label: '신청 실패', cls: 'badge-failed' },
+    PENDING: { label: '처리 중', cls: 'badge-pending' },
+    SUCCESS: { label: '주문 완료', cls: 'badge-success' },
+    FAILED: { label: '실패', cls: 'badge-failed' },
   };
   const { label, cls } = map[status] || { label: status, cls: '' };
-  return <span className={`badge ${cls}`}>{label}</span>;
+  return <span className={`product-status-badge ${cls}`}>{label}</span>;
 };
 
 export const LoadingSpinner = ({ text = '로딩 중...' }) => (
-  <div className="spinner-wrap">
+  <div className="loading-wrap">
     <div className="spinner" />
-    <p className="spinner-text">{text}</p>
+    <p className="loading-text">{text}</p>
   </div>
 );
-
-export const CapacityBar = ({ capacity, enrolledCount }) => {
-  const pct = Math.min((enrolledCount / capacity) * 100, 100);
-  const isFull = pct >= 100;
-  return (
-    <div className="capacity-wrap">
-      <div className="capacity-bar">
-        <div
-          className={`capacity-fill ${isFull ? 'full' : pct >= 80 ? 'warn' : ''}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="capacity-text">
-        {isFull ? '마감' : `${enrolledCount} / ${capacity}명`}
-      </span>
-    </div>
-  );
-};

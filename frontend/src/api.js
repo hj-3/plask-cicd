@@ -1,31 +1,51 @@
-// Runtime env takes priority (injected by docker-entrypoint.sh via /env-config.js)
-// Falls back to Vite build-time env, then defaults to '/api' (nginx proxy)
-const API_BASE_URL =
-  (typeof window !== 'undefined' && window._env_?.API_BASE_URL) ||
-  import.meta.env.VITE_API_BASE_URL ||
-  '/api';
+const BASE = '/api';
 
-async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, options);
+function getToken() {
+  return localStorage.getItem('plask_token') || '';
+}
+
+function authHeaders(withBody = false) {
+  const h = { Authorization: `Bearer ${getToken()}` };
+  if (withBody) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+async function request(method, path, body) {
+  const hasBody = body !== undefined;
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers: authHeaders(hasBody),
+    body: hasBody ? JSON.stringify(body) : undefined,
+  });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.error || `HTTP ${res.status}`);
+    const err = new Error(data.message || '서버 오류가 발생했습니다.');
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
   return data;
 }
 
-export function getCourses() {
-  return request('/courses');
-}
+export const api = {
+  get: (path) => request('GET', path),
+  post: (path, body) => request('POST', path, body),
+  put: (path, body) => request('PUT', path, body),
+  delete: (path) => request('DELETE', path),
+};
 
-export function postEnrollment(userId, courseId) {
-  return request('/enrollments', {
-    method: 'POST',
+// Auth (no token needed)
+export async function authRequest(method, path, body) {
+  const res = await fetch(`${BASE}${path}`, {
+    method,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, courseId }),
+    body: body ? JSON.stringify(body) : undefined,
   });
-}
-
-export function getRequest(requestId) {
-  return request(`/requests/${requestId}`);
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.message || '서버 오류가 발생했습니다.');
+    err.status = res.status;
+    throw err;
+  }
+  return data;
 }

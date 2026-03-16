@@ -7,6 +7,6 @@ RUN npm ci --only=production
 
 COPY src ./src
 
-EXPOSE 3001
+EXPOSE 3002
 
 CMD ["node", "src/index.js"]

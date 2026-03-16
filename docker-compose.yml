@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: enrollment
+      POSTGRES_DB: plask
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
@@ -13,15 +13,27 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d enrollment"]
+      test: ["CMD-SHELL", "pg_isready -U user -d plask"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  # Redis 1: Session & Cache
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redis 2: FIFO Order Queue
+  redis-queue:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -33,29 +45,54 @@ services:
     ports:
       - "3002:3002"
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/enrollment
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      QUEUE_NAME: enrollment-queue
+      DATABASE_URL: postgresql://user:password@postgres:5432/plask
+      # Redis 1: Session/Cache
+      SESSION_REDIS_HOST: redis
+      SESSION_REDIS_PORT: 6379
+      # Redis 2: Order Queue
+      QUEUE_REDIS_HOST: redis-queue
+      QUEUE_REDIS_PORT: 6379
+      QUEUE_NAME: order-queue
       PORT: 3002
+      JWT_SECRET: plask-super-secret-key
+      JWT_EXPIRES_IN: 24h
+      # Admin credentials (auto-created on startup)
+      ADMIN_EMAIL: admin@plask.com
+      ADMIN_PASSWORD: admin1234
+      ADMIN_NAME: 관리자
+      # SMTP Email (configure your SMTP)
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: noreply@plask.com
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      redis-queue:
         condition: service_healthy
     restart: on-failure
 
   worker:
     build: ./worker
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/enrollment
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      QUEUE_NAME: enrollment-queue
+      DATABASE_URL: postgresql://user:password@postgres:5432/plask
+      # Redis 2: Order Queue
+      QUEUE_REDIS_HOST: redis-queue
+      QUEUE_REDIS_PORT: 6379
+      QUEUE_NAME: order-queue
+      # SMTP Email
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: noreply@plask.com
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      redis-queue:
         condition: service_healthy
     restart: on-failure
 
