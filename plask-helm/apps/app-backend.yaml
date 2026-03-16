@@ -11,7 +11,7 @@ spec:
   project: plask
 
   source:
-    repoURL: https://github.com/YOUR_GITHUB_ORG/plask-helm
+    repoURL: https://github.com/hj-3/plask-helm
     targetRevision: main
     path: charts/backend
     helm:

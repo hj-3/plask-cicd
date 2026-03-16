@@ -10,9 +10,9 @@ spec:
 
   # Source repos (update with your GitHub org)
   sourceRepos:
-    - "https://github.com/YOUR_GITHUB_ORG/plask-helm"
-    - "https://github.com/YOUR_GITHUB_ORG/plask-frontend"
-    - "https://github.com/YOUR_GITHUB_ORG/plask-backend"
+    - "https://github.com/hj-3/plask-helm"
+    - "https://github.com/hj-3/plask-frontend"
+    - "https://github.com/hj-3/plask-backend"
 
   destinations:
     - namespace: plask
